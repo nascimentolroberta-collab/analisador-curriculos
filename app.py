@@ -15,8 +15,7 @@ if "run_analysis" not in st.session_state:
     reset_app()
 
 # Título
-st.title("🔍 Candidata
-Triagem de Currículos")
+st.title("🔍 Candidata - Triagem de Currículos")
 
 # Upload de arquivos
 if not st.session_state.run_analysis:
