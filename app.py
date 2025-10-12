@@ -1,17 +1,17 @@
 import streamlit as st
 import fitz  # PyMuPDF
 
-st.set_page_config(page_title="Analisador de Currículos", layout="centered")
+st.set_page_config(page_title="Candidata: Triagem de Currículos", layout="centered")
 
-st.title("🔍 Analisador de Currículos em PDF")
+st.title("🔍 Candidata: Triagem de Currículos")
 
 # 1. Upload de arquivos
 uploaded_files = st.file_uploader("Faça upload de currículos em PDF", type=["pdf"], accept_multiple_files=True)
 
 # 2. Campos para requisitos
-st.subheader("Requisitos")
-requisito_1 = st.text_input("Requisito 1 (ex: Python)").strip().lower()
-requisito_2 = st.text_input("Requisito 2 (ex: Excel)").strip().lower()
+st.subheader("Requisitos Técnicos")
+requisito_1 = st.text_input("Graduação (ex: Engenharia Civil)").strip().lower()
+requisito_2 = st.text_input("Habilidades Técnicas (ex: Excel; Autocad)").strip().lower()
 
 # 3. Botão para analisar
 if st.button("🔎 Analisar Currículos"):
