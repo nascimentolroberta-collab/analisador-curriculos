@@ -6,46 +6,47 @@ st.set_page_config(page_title="Candidata - Triagem de Currículos", layout="cent
 # Função para resetar o estado
 def reset_app():
     st.session_state.run_analysis = False
-    st.session_state.uploaded_files = []
     st.session_state.requisitos_1 = ""
     st.session_state.requisitos_multiplos = ""
 
-# Inicializa o estado da análise
+# Inicializa o estado
 if "run_analysis" not in st.session_state:
     reset_app()
 
-# Título
 st.title("🔍 Candidata - Triagem de Currículos")
 
-# Upload de arquivos
 if not st.session_state.run_analysis:
     uploaded_files = st.file_uploader(
         "Faça upload de currículos em PDF",
         type=["pdf"],
-        accept_multiple_files=True,
-        key="uploaded_files"
+        accept_multiple_files=True
     )
 
     if uploaded_files:
         st.success(f"✅ {len(uploaded_files)} currículos carregados com sucesso!")
 
-    # Campo para requisitos
     st.subheader("Requisitos")
-    st.text_input("Graduação (ex: Engenharia Civil)", key="requisitos_1")
-    st.text_area("Habilidades técnicas (ex: Autocad, Excel)", height=120, key="requisitos_multiplos")
+    st.text_input("Graduação obrigatória (ex: Engenharia Civil)", key="requisitos_1")
+    st.text_area("Habilidades técnicas desejadas (uma por linha)", height=120, key="requisitos_multiplos")
 
-    # Botão para rodar análise
     if st.button("🔎 Analisar Currículos"):
         if not uploaded_files or not st.session_state.requisitos_1.strip():
-            st.warning("Por favor, envie currículos e preencha pelo menos o requisito principal.")
+            st.warning("Por favor, envie currículos e preencha o campo de graduação.")
         else:
             st.session_state.run_analysis = True
+            st.session_state.uploaded_files = uploaded_files  # salvar para próxima fase
+            st.experimental_rerun()
 
 # Análise dos currículos
 if st.session_state.run_analysis:
     resultados = []
-    requisito_1 = st.session_state.requisitos_1.strip().lower()
-    outros_requisitos = [linha.strip().lower() for linha in st.session_state.requisitos_multiplos.splitlines() if linha.strip()]
+    requisito_graduacao = st.session_state.requisitos_1.strip().lower()
+    habilidades_desejadas = [
+        h.strip().lower() for h in st.session_state.requisitos_multiplos.splitlines() if h.strip()
+    ]
+
+    termos_conclusao = ["concluído", "completo", "formado", "formação", "bacharel", "graduado"]
+    termos_nao_concluido = ["em andamento", "cursando", "incompleto", "estudando"]
 
     for file in st.session_state.uploaded_files:
         texto_pdf = ""
@@ -55,16 +56,32 @@ if st.session_state.run_analysis:
 
         texto_pdf = texto_pdf.lower()
 
-        # Verifica se todos os requisitos estão no texto
-        if requisito_1 in texto_pdf and all(r in texto_pdf for r in outros_requisitos):
-            resultados.append(file.name)
+        possui_graduacao = requisito_graduacao in texto_pdf
+        tem_conclusao = any(t in texto_pdf for t in termos_conclusao)
+        em_andamento = any(t in texto_pdf for t in termos_nao_concluido)
 
-    st.subheader("📄 Currículos que atendem aos requisitos:")
+        if possui_graduacao and tem_conclusao and not em_andamento:
+            pontuacao = 10  # peso da graduação
+            habilidades_encontradas = []
+
+            for habilidade in habilidades_desejadas:
+                if habilidade in texto_pdf:
+                    pontuacao += 1
+                    habilidades_encontradas.append(habilidade)
+
+            resultados.append({
+                "nome": file.name,
+                "pontuacao": pontuacao,
+                "habilidades": habilidades_encontradas
+            })
+
+    st.subheader("📄 Currículos aprovados (ordenados por pontuação):")
     if resultados:
-        for nome in resultados:
-            st.success(f"✅ {nome}")
+        resultados_ordenados = sorted(resultados, key=lambda x: x["pontuacao"], reverse=True)
+        for r in resultados_ordenados:
+            st.success(f"✅ {r['nome']} — Pontuação: {r['pontuacao']} — Habilidades: {', '.join(r['habilidades']) if r['habilidades'] else 'Nenhuma'}")
     else:
-        st.error("❌ Nenhum currículo corresponde aos requisitos informados.")
+        st.error("❌ Nenhum currículo corresponde aos critérios de graduação e habilidades.")
 
     st.markdown("---")
     if st.button("🔄 Nova análise"):
