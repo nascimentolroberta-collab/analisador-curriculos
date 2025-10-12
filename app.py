@@ -8,6 +8,7 @@ def reset_app():
     st.session_state.run_analysis = False
     st.session_state.requisitos_1 = ""
     st.session_state.requisitos_multiplos = ""
+    st.session_state.uploaded_files = []
 
 # Inicializa o estado
 if "run_analysis" not in st.session_state:
@@ -23,6 +24,7 @@ if not st.session_state.run_analysis:
     )
 
     if uploaded_files:
+        st.session_state.uploaded_files = uploaded_files
         st.success(f"✅ {len(uploaded_files)} currículos carregados com sucesso!")
 
     st.subheader("Requisitos")
@@ -30,12 +32,10 @@ if not st.session_state.run_analysis:
     st.text_area("Habilidades técnicas desejadas (uma por linha)", height=120, key="requisitos_multiplos")
 
     if st.button("🔎 Analisar Currículos"):
-        if not uploaded_files or not st.session_state.requisitos_1.strip():
+        if not st.session_state.uploaded_files or not st.session_state.requisitos_1.strip():
             st.warning("Por favor, envie currículos e preencha o campo de graduação.")
         else:
             st.session_state.run_analysis = True
-            st.session_state.uploaded_files = uploaded_files  # salvar para próxima fase
-            st.experimental_rerun()
 
 # Análise dos currículos
 if st.session_state.run_analysis:
@@ -86,4 +86,3 @@ if st.session_state.run_analysis:
     st.markdown("---")
     if st.button("🔄 Nova análise"):
         reset_app()
-        st.experimental_rerun()
