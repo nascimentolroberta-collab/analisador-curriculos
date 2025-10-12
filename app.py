@@ -116,5 +116,7 @@ if st.session_state.run_analysis:
         st.error("❌ Nenhum currículo corresponde aos critérios obrigatórios.")
 
     st.markdown("---")
-    if st.button("🔄 Nova análise"):
+        if st.button("🔄 Nova análise"):
         reset_app()
+        st.experimental_rerun()
+
