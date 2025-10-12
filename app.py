@@ -4,7 +4,7 @@ import difflib  # Para comparação de similaridade
 
 st.set_page_config(page_title="Candidata - Triagem de Currículos", layout="centered")
 
-# Resetar estado da aplicação
+# Função para resetar o estado da aplicação
 def reset_app():
     st.session_state.run_analysis = False
     st.session_state.requisitos_1 = ""
@@ -13,13 +13,13 @@ def reset_app():
     st.session_state.escolaridade_minima = ""
     st.session_state.estado_desejado = ""
 
-# Inicialização
+# Inicializa estado
 if "run_analysis" not in st.session_state:
     reset_app()
 
 st.title("🔍 Candidata - Triagem de Currículos")
 
-# Página inicial
+# Página inicial (upload e campos)
 if not st.session_state.run_analysis:
     uploaded_files = st.file_uploader(
         "📄 Faça upload de currículos em PDF",
@@ -77,13 +77,15 @@ if st.session_state.run_analysis:
 
     for file in st.session_state.uploaded_files:
         texto_pdf = ""
-        with fitz.open(stream=file.read(), filetype="pdf") as doc:
+
+        file_bytes = file.read()  # Ler bytes do arquivo para evitar erro EmptyFileError
+        with fitz.open(stream=file_bytes, filetype="pdf") as doc:
             for page in doc:
                 texto_pdf += page.get_text()
 
         texto_pdf = texto_pdf.lower()
 
-        # ✅ Regras de exclusão
+        # Verificações eliminatórias
         possui_curso = curso_desejado in texto_pdf
         conclusao_curso = any(t in texto_pdf for t in termos_conclusao)
         curso_em_andamento = any(t in texto_pdf for t in termos_nao_concluido)
@@ -94,8 +96,8 @@ if st.session_state.run_analysis:
             pontuacao = 10  # peso para graduação
             habilidades_encontradas = []
 
+            palavras_no_texto = texto_pdf.split()
             for habilidade in habilidades_desejadas:
-                palavras_no_texto = texto_pdf.split()
                 match_similar = difflib.get_close_matches(habilidade, palavras_no_texto, n=1, cutoff=0.8)
                 if match_similar:
                     pontuacao += 1
@@ -115,7 +117,7 @@ if st.session_state.run_analysis:
     else:
         st.error("❌ Nenhum currículo corresponde aos critérios obrigatórios.")
 
-        st.markdown("---")
+    st.markdown("---")
     if st.button("🔄 Nova análise"):
         reset_app()
         st.experimental_rerun()
