@@ -1,24 +1,28 @@
 import streamlit as st
 import fitz  # PyMuPDF
+import difflib  # Para comparação de similaridade
 
 st.set_page_config(page_title="Candidata - Triagem de Currículos", layout="centered")
 
-# Função para resetar o estado
+# Resetar estado da aplicação
 def reset_app():
     st.session_state.run_analysis = False
     st.session_state.requisitos_1 = ""
     st.session_state.requisitos_multiplos = ""
     st.session_state.uploaded_files = []
+    st.session_state.escolaridade_minima = ""
+    st.session_state.estado_desejado = ""
 
-# Inicializa o estado
+# Inicialização
 if "run_analysis" not in st.session_state:
     reset_app()
 
 st.title("🔍 Candidata - Triagem de Currículos")
 
+# Página inicial
 if not st.session_state.run_analysis:
     uploaded_files = st.file_uploader(
-        "Faça upload de currículos em PDF",
+        "📄 Faça upload de currículos em PDF",
         type=["pdf"],
         accept_multiple_files=True
     )
@@ -27,20 +31,43 @@ if not st.session_state.run_analysis:
         st.session_state.uploaded_files = uploaded_files
         st.success(f"✅ {len(uploaded_files)} currículos carregados com sucesso!")
 
-    st.subheader("Requisitos")
-    st.text_input("Graduação obrigatória (ex: Engenharia Civil)", key="requisitos_1")
+    st.subheader("🎯 Requisitos obrigatórios")
+    st.text_input("Curso de Graduação (ex: Engenharia Civil)", key="requisitos_1")
+
+    st.selectbox(
+        "Escolaridade mínima",
+        options=[
+            "Ensino Médio completo",
+            "Curso Técnico completo",
+            "Superior cursando",
+            "Superior completo",
+            "Pós-graduação ou superior"
+        ],
+        key="escolaridade_minima"
+    )
+
+    estados = [
+        "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
+        "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN",
+        "RS", "RO", "RR", "SC", "SP", "SE", "TO"
+    ]
+    st.selectbox("Estado do candidato", options=estados, key="estado_desejado")
+
     st.text_area("Habilidades técnicas desejadas (uma por linha)", height=120, key="requisitos_multiplos")
 
     if st.button("🔎 Analisar Currículos"):
         if not st.session_state.uploaded_files or not st.session_state.requisitos_1.strip():
-            st.warning("Por favor, envie currículos e preencha o campo de graduação.")
+            st.warning("Por favor, envie os currículos e preencha todos os campos obrigatórios.")
         else:
             st.session_state.run_analysis = True
 
-# Análise dos currículos
+# Página de análise
 if st.session_state.run_analysis:
     resultados = []
-    requisito_graduacao = st.session_state.requisitos_1.strip().lower()
+
+    curso_desejado = st.session_state.requisitos_1.strip().lower()
+    escolaridade_minima = st.session_state.escolaridade_minima.strip().lower()
+    estado_desejado = st.session_state.estado_desejado.strip().lower()
     habilidades_desejadas = [
         h.strip().lower() for h in st.session_state.requisitos_multiplos.splitlines() if h.strip()
     ]
@@ -56,16 +83,21 @@ if st.session_state.run_analysis:
 
         texto_pdf = texto_pdf.lower()
 
-        possui_graduacao = requisito_graduacao in texto_pdf
-        tem_conclusao = any(t in texto_pdf for t in termos_conclusao)
-        em_andamento = any(t in texto_pdf for t in termos_nao_concluido)
+        # ✅ Regras de exclusão
+        possui_curso = curso_desejado in texto_pdf
+        conclusao_curso = any(t in texto_pdf for t in termos_conclusao)
+        curso_em_andamento = any(t in texto_pdf for t in termos_nao_concluido)
+        possui_escolaridade = escolaridade_minima in texto_pdf
+        estado_ok = estado_desejado in texto_pdf
 
-        if possui_graduacao and tem_conclusao and not em_andamento:
-            pontuacao = 10  # peso da graduação
+        if possui_curso and conclusao_curso and not curso_em_andamento and possui_escolaridade and estado_ok:
+            pontuacao = 10  # peso para graduação
             habilidades_encontradas = []
 
             for habilidade in habilidades_desejadas:
-                if habilidade in texto_pdf:
+                palavras_no_texto = texto_pdf.split()
+                match_similar = difflib.get_close_matches(habilidade, palavras_no_texto, n=1, cutoff=0.8)
+                if match_similar:
                     pontuacao += 1
                     habilidades_encontradas.append(habilidade)
 
@@ -81,7 +113,7 @@ if st.session_state.run_analysis:
         for r in resultados_ordenados:
             st.success(f"✅ {r['nome']} — Pontuação: {r['pontuacao']} — Habilidades: {', '.join(r['habilidades']) if r['habilidades'] else 'Nenhuma'}")
     else:
-        st.error("❌ Nenhum currículo corresponde aos critérios de graduação e habilidades.")
+        st.error("❌ Nenhum currículo corresponde aos critérios obrigatórios.")
 
     st.markdown("---")
     if st.button("🔄 Nova análise"):
